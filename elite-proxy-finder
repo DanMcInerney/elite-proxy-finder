@@ -1,12 +1,12 @@
+#!/usr/bin/env python
+
 import requests
 import ast
 import gevent
-#!/usr/bin/env python
-
 import os
 import time
-from socket import setdefaulttimeout
-setdefaulttimeout(25)
+# from socket import setdefaulttimeout
+# setdefaulttimeout(25)
 
 class find_http_proxy():
 	''' Will only gather L1 (elite anonymity) proxies 
@@ -61,12 +61,12 @@ class find_http_proxy():
 		try:
 			check = requests.get('http://cnn.com',
 								headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'},
-								proxies = {'http':'http://'+proxy})
+								proxies = {'http':'http://'+proxy},
+								timeout=25)
 			self.checked_proxies.append('%s | %s' % (check.elapsed, proxy))
-			self.print_func()
 		except Exception as e:
 			self.checked_proxies.append('%s | %s' % ('Error'.ljust(14), proxy))
-			self.print_func()
+		self.print_func()
 
 	def print_func(self):
 		os.system('cls' if os.name == 'nt' else 'clear') #cross platform clear
@@ -84,12 +84,13 @@ class find_http_proxy():
 			for proxy in self.checked_proxies:
 				print '    '+proxy
 
-	def run(self):
-		line_data = self.get_data()
-		self.make_proxy_list(line_data)
-		self.proxy_checker()
-		self.end_time = time.time()
-		print self.end_time - self.start_time
-
-P = find_http_proxy()
-P.run()
+def main():
+	P = find_http_proxy()
+	line_data = P.get_data()
+	P.make_proxy_list(line_data)
+	P.proxy_checker()
+	# end_time = time.time()
+	# diff = end_time - P.start_time
+	# print diff
+	
+main()
