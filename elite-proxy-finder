@@ -60,9 +60,9 @@ class find_http_proxy():
 		''' See how long each proxy takes to open cnn.com '''
 		try:
 			check = requests.get('http://cnn.com',
-								headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'},
-								proxies = {'http':'http://'+proxy},
-								timeout=25)
+						headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'},
+						proxies = {'http':'http://'+proxy},
+						timeout=25)
 			self.checked_proxies.append('%s | %s' % (check.elapsed, proxy))
 		except Exception as e:
 			self.checked_proxies.append('%s | %s' % ('Error'.ljust(14), proxy))
