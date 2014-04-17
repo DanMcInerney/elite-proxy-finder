@@ -1,0 +1,95 @@
+import requests
+import ast
+import gevent
+#!/usr/bin/env python
+
+import os
+import time
+from socket import setdefaulttimeout
+setdefaulttimeout(25)
+
+class find_http_proxy():
+	''' Will only gather L1 (elite anonymity) proxies 
+	Proxies should not give out your IP or advertise
+	that you are using a proxy at all'''
+	
+	def __init__(self):
+		self.checked_proxies = []
+		self.proxy_list = []
+		self.start_time = time.time()
+		
+	def get_data(self):
+		r = requests.get('http://gatherproxy.com/proxylist/anonymity/?t=Elite', headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'})
+		line_data = r.text.splitlines()
+		return line_data
+
+	def make_proxy_list(self, line_data):
+		''' Make a nicely sorted list of fast proxy services
+		and print them out too '''
+		for l in line_data:
+			if 'proxy_ip' in l.lower():
+				lag, ip_port, ctry = self.parse_data(l)
+				if lag < 250:
+					self.proxy_list.append((lag, ip_port, ctry))
+		self.proxy_list.sort(key=lambda plist: plist[:2])
+		self.print_func()
+		
+	def parse_data(self, l):
+		''' Parse the raw scraped data '''
+		l = l.replace('gp.insertPrx(', '')
+		l = l.replace(');', '')
+		l = l.replace('null', 'None')
+		l = l.strip()
+		l = ast.literal_eval(l)
+		
+		lag = int(l['PROXY_TIME'])
+		ip_port = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
+		ctry = l["PROXY_COUNTRY"]
+		return lag, ip_port, ctry
+
+	def proxy_checker(self):
+		''' Concurrency stuff here '''
+		proxy_URIs = []
+		for p in self.proxy_list:
+			proxy_URIs.append(p[1])
+
+		jobs = [gevent.spawn(self.proxy_checker_req, proxy) for proxy in proxy_URIs]
+		gevent.joinall(jobs)
+
+	def proxy_checker_req(self, proxy):
+		''' See how long each proxy takes to open cnn.com '''
+		try:
+			check = requests.get('http://cnn.com',
+								headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'},
+								proxies = {'http':'http://'+proxy})
+			self.checked_proxies.append('%s | %s' % (check.elapsed, proxy))
+			self.print_func()
+		except Exception as e:
+			self.checked_proxies.append('%s | %s' % ('Error'.ljust(14), proxy))
+			self.print_func()
+
+	def print_func(self):
+		os.system('cls' if os.name == 'nt' else 'clear') #cross platform clear
+		print '[*] Proxies reported with < 250ms ping'
+		print ''
+		print '    ms        Proxy       Country'
+		for p in self.proxy_list:
+			print '   ', str(p[0]).ljust(2), p[1].ljust(12), p[2]
+		print ''
+		print '[*] Testing proxy speed against www.cnn.com ...'
+		print ''
+		print '     Time elapsed         Proxy'
+		if len(self.checked_proxies) > 0:
+			self.checked_proxies.sort()
+			for proxy in self.checked_proxies:
+				print '    '+proxy
+
+	def run(self):
+		line_data = self.get_data()
+		self.make_proxy_list(line_data)
+		self.proxy_checker()
+		self.end_time = time.time()
+		print self.end_time - self.start_time
+
+P = find_http_proxy()
+P.run()
