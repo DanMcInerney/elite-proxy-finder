@@ -1,7 +1,7 @@
 elite-proxy-finder
 ==================
 
-Finds elite anonymity (L1) HTTP proxies using gatherproxy.com and letushide.com then tests them all concurrently. Scrapes 25 L1 proxies which were most recently checked on by gatherproxy.com (within the last 2-5 minutes) and all L1 proxies checked within the last 3 days by letushide.com. This will usually lead to 100+ recently tested proxies.
+Finds elite anonymity (L1) HTTP proxies using gatherproxy.com and letushide.com then tests them all concurrently. Scrapes 25 L1 proxies which were most recently checked on by gatherproxy.com (within the last 2-5 minutes) and all L1 proxies checked within the last 3 days by letushide.com. This will usually lead to 100+ recently checked proxies all tested in <20 seconds.
 
 
 Usage:
