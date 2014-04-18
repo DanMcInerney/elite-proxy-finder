@@ -127,7 +127,6 @@ class find_http_proxy():
         if self.show:
             self.proxy_counter += 1
             if self.proxy_counter == int(self.show):
-                gevent.shutdown
                 sys.exit()
 
 P = find_http_proxy(parse_args())

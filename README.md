@@ -18,5 +18,12 @@ Print only the 5 fastest proxies amongst the entire proxy selection.
 
 
 
-*Note:
+Note for Kali:
+------
 Kali has gevent 0.13 installed by default, you will need gevent 1.0 to get the -s option working.
+
+```shell
+apt-get install python-dev
+pip install --upgrade gevent
+```
+
