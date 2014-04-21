@@ -8,14 +8,15 @@ otherwise it will display the error that occurred.
 Requirements:
 ------
 * Tested on Kali 1.0.6
-    -Kali has gevent 0.13 in its repo and you will need gevent 1.0 to get the -s option working.
-    ```shell
-    apt-get install python-dev gevent
-    pip install --upgrade gevent
-    ```
 * Python 2.7
-    -gevent
-    -requests
+  * gevent
+  * requests
+
+Kali has gevent 0.13 in its repo and you will need gevent 1.0 to get the -s option working.
+```shell
+apt-get install python-dev gevent
+pip install --upgrade gevent
+```
 
 
 Usage:
