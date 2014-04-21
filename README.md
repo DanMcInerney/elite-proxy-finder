@@ -10,30 +10,26 @@ Usage:
 ```shell
 python elite-proxy-finder.py
 ```
-Display the time it took each proxy to send a request and receive a reply from https://yahoo.com printing the fastest ones first.
+Display the time it took each proxy to send a request and receive a reply from the 3 test URLs displaying the results as they come in, or show the error that occurred
 
 ```shell
-python elite-proxy-finder.py -s 5
+python elite-proxy-finder.py -s 10
 ```
-Print only the first 5 proxy results.
+Show only the first 10 proxy results.
 
 
 
 Requirements:
 ------
 * Tested on Kali 1.0.6
+    -Kali has gevent 0.13 in its repo and you will need gevent 1.0 to get the -s option working.
+    ```shell
+    apt-get install python-dev gevent
+    pip install --upgrade gevent
+    ```
 * Python 2.7
     -gevent
     -requests
 
 
-NOTE FOR KALI USERS:
-
-
-Kali has gevent 0.13 in its repo and you will need gevent 1.0 to get the -s option working.
-
-```shell
-apt-get install python-dev gevent
-pip install --upgrade gevent
-```
 

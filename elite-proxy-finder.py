@@ -7,8 +7,6 @@ import requests
 import ast
 import gevent
 import sys, re, time, os, argparse
-from socket import setdefaulttimeout
-setdefaulttimetout = 30
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -129,39 +127,38 @@ class find_http_proxy():
                 first_3_octets = '.'.join(proxy_split[:3])+'.'
 
                 if 'Access denied' in html:
-                    time = "Access denied"
+                    time = 'Access denied'
                 elif first_3_octets not in html:
+                    time = 'Page loaded but proxy failed'
                     if 'captcha' in html.lower():
                         time = time+' - Captcha detected'
-                    time = 'Page loaded but proxy failed'
-
-                    with open('no_proxy_ip_html.txt', 'a') as f:
-                        f.write('\n\n\n'+proxyip)
-                        f.write('----------------------------------------------------------------------------------------')
-                        f.write(html)
 
                 url = self.url_shortener(url)
                 results.append((time, proxy, url))
 
             except Exception as e:
                 #raise
-                if 'Cannot connect' in str(e):
-                    time = 'Cannot connect to proxy'
-                elif 'timed out' in str(e).lower():
-                    time = 'Timed out'
-                elif 'retries exceeded' in str(e):
-                    time = 'Max retries exceeded'
-                elif 'Connection reset by peer' in str(e):
-                    time = 'Connection reset by peer'
-                elif 'readline() takes exactly 1 argument (2 given)' in str(e):
-                    time = 'SSL error'
-                else:
-                    time = 'Err: '+str(e)
+                time = self.error_handler(e)
                 url = self.url_shortener(url)
                 results.append((time, proxy, url))
 
         self.printer(results)
         self.limiter()
+
+    def error_handler(self, e):
+        if 'Cannot connect' in str(e):
+            time = 'Cannot connect to proxy'
+        elif 'timed out' in str(e).lower():
+            time = 'Timed out'
+        elif 'retries exceeded' in str(e):
+            time = 'Max retries exceeded'
+        elif 'Connection reset by peer' in str(e):
+            time = 'Connection reset by peer'
+        elif 'readline() takes exactly 1 argument (2 given)' in str(e):
+            time = 'SSL error'
+        else:
+            time = 'Err: '+str(e)
+        return time
 
     def url_shortener(self, url):
         if 'ipchicken' in url:
