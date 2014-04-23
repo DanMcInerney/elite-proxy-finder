@@ -1,9 +1,7 @@
 elite-proxy-finder
 ==================
 
-Finds elite anonymity (L1) HTTP proxies using gatherproxy.com and letushide.com then tests them all concurrently. Scrapes 25 L1 proxies which were checked on by gatherproxy.com within the last 2-5 minutes and all L1 proxies checked within the last 3 days by letushide.com. Tests them all against 3 IP checking URLs including one which is https to check for that compatibility. If it finds the proxy IP address in the HTML of the page then it will display the time it took to get a response,
-otherwise it will display the error that occurred.
-
+Finds elite anonymity (L1) HTTP proxies using gatherproxy.com and letushide.com then test them all in parallel. Scrapes 25 L1 proxies which were checked on by gatherproxy.com within the last 2-5 minutes and all L1 proxies checked within the last 3 days by letushide.com. Tests them all against 3 IP checking URLs including one which is HTTPS to check for compatibility with that protocol. By default the script will only print the proxy IP, request time, and country code of proxies that pass all three tests but you can see the results including errors in any of the tests with the -a (--all) option. 
 
 Requirements:
 ------
@@ -12,24 +10,22 @@ Requirements:
   * gevent
   * requests
 
-Kali has gevent 0.13 in its repo and you will need gevent 1.0 to get the -s option working.
+Kali has gevent 0.13 in its repo and you will need gevent 1.0 if you want the -s option to work. Works fine with 0.13 other than that.
 ```shell
 apt-get install python-dev gevent
 pip install --upgrade gevent
-```
 
 
 Usage:
 ------
-```shell
-python elite-proxy-finder.py
-```
-Display the time it took each proxy to send a request and receive a reply from the 3 test URLs displaying the results as they come in, or show the error that occurred
+```python elite-proxy-finder.py```
+Show proxies that pass all three tests, their country code, and the time it took for each request to complete. Prints the fastest proxies first.
 
-```shell
-python elite-proxy-finder.py -s 10
-```
-Show only the first 10 proxy results.
+```python elite-proxy-finder.py -s 10```
+Show only the fastest 10 proxy results.
+
+```python elite-proxy-finder.py -a```
+Show all proxy results including the errors that occurred.
 
 
 

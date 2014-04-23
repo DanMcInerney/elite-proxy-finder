@@ -10,7 +10,8 @@ import sys, re, time, os, argparse
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--show', help='Show this number of results. Example: -s 5 will show the 5 fastest proxies then stop')
+    parser.add_argument('-s', '--show', help='Show this number of results. Example: "-s 5" will show the 5 fastest proxies then stop')
+    parser.add_argument('-a', '--all', help='Show all proxy results including the ones that failed 1 of the 3 tests', action='store_true')
     return parser.parse_args()
 
 class find_http_proxy():
@@ -22,15 +23,24 @@ class find_http_proxy():
         self.checked_proxies = []
         self.proxy_list = []
         self.headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'}
-        self.show = args.show
-        self.proxy_counter = 0
+        self.show_num = args.show
+        self.show_all = args.all
         self.errors = []
+        self.print_counter = 0
 
     def run(self):
         ''' Gets raw high anonymity (L1) proxy data then calls make_proxy_list()
         Currently parses data from gatherproxy.com and letushide.com '''
-        letushide_list = self.letushide_req()
-        gatherproxy_list = self.gatherproxy_req()
+
+        try:
+            letushide_list = self.letushide_req()
+        except Exception:
+            print '[!] Failed to get proxy list from letushide.com'
+
+        try:
+            gatherproxy_list = self.gatherproxy_req()
+        except Exception:
+            print '[!] Failed to get proxy list from gatherproxy.com'
 
         self.proxy_list.append(letushide_list)
         self.proxy_list.append(gatherproxy_list)
@@ -40,7 +50,7 @@ class find_http_proxy():
         print '[*] %d high anonymity proxies found' % len(self.proxy_list)
         print '[*] Testing proxy speeds ...'
         print ''
-        print '      Proxy           |       Domain         - Load Time/Errors'
+        print '      Proxy           | CC  |       Domain         | Time/Errors'
 
         self.proxy_checker()
 
@@ -107,11 +117,21 @@ class find_http_proxy():
     def proxy_checker(self):
         ''' Concurrency stuff here '''
         jobs = [gevent.spawn(self.proxy_checker_req, proxy) for proxy in self.proxy_list]
-        gevent.joinall(jobs)
+        try:
+            gevent.joinall(jobs)
+        except KeyboardInterrupt:
+            sys.exit('[-] Ctrl-C caught, exiting')
 
     def proxy_checker_req(self, proxy):
-        ''' See how long each proxy takes to open https://www.yahoo.com '''
+        ''' See how long each proxy takes to open each URL '''
         urls = ['http://www.ipchicken.com', 'http://whatsmyip.net/', 'https://www.astrill.com/what-is-my-ip-address.php']
+        proxyip = str(proxy.split(':', 1)[0])
+        country_code = self.get_country_code(proxyip)
+
+        # A lot of proxy checker sites give a different final octet for some reason
+        proxy_split = proxyip.split('.')
+        first_3_octets = '.'.join(proxy_split[:3])+'.'
+
         results = []
         for url in urls:
             try:
@@ -120,42 +140,82 @@ class find_http_proxy():
                                     proxies = {'http':'http://'+proxy,
                                                'https':'http://'+proxy},
                                     timeout = 15)
+
                 time = str(check.elapsed)
                 html = check.text
-                proxyip = str(proxy.split(':', 1)[0])
-                proxy_split = proxyip.split('.')
-                first_3_octets = '.'.join(proxy_split[:3])+'.'
-
-                if 'Access denied' in html:
-                    time = 'Access denied'
-                elif first_3_octets not in html:
-                    time = 'Page loaded but proxy failed'
-                    if 'captcha' in html.lower():
-                        time = time+' - Captcha detected'
-
+                html_lines = html.splitlines()
+                time = self.check_ip_on_page(time, html_lines, first_3_octets)
                 url = self.url_shortener(url)
-                results.append((time, proxy, url))
+
+                results.append((time, proxy, url, country_code))
 
             except Exception as e:
                 #raise
                 time = self.error_handler(e)
                 url = self.url_shortener(url)
-                results.append((time, proxy, url))
+                results.append((time, proxy, url, country_code))
 
-        self.printer(results)
-        self.limiter()
+        self.print_handler(results)
+
+    def print_handler(self, results):
+        if self.show_all:
+            self.printer(results)
+            self.print_counter += 1
+        else:
+            passed_all = self.passed_all_tests(results)
+            if passed_all:
+                self.printer(results)
+                self.print_counter += 1
+
+        if self.show_num:
+            self.limiter()
+
+    def get_country_code(self, proxyip):
+        ''' Get the 3 letter country code of the proxy using geoiptool.com
+        Would use the geoip library, but it requires a local DB and what
+        is the point of that hassle other than marginal speed improvement '''
+        cc_line_found = False
+        cc = 'N/A'
+
+        r = requests.get('http://www.geoiptool.com/en/?IP=%s' % proxyip)
+        html = r.text
+        html_lines = html.splitlines()
+        for l in html_lines:
+            if cc_line_found == True:
+                cc = l.split('(', 1)[1].split(')', 1)[0]
+                break
+            if 'country code:' in l.lower():
+                cc_line_found = True
+        return cc
+
+    def check_ip_on_page(self, time, html_lines, first_3_octets):
+        ''' Check for the IP on the page, for a captcha, and for 'access denied' mesg '''
+        ip_found = False
+
+        for l in html_lines:
+            if first_3_octets in l:
+                ip_found = True
+            if 'captcha' in l.lower():
+                time = time + ' - Captcha detected'
+            if 'access denied' in l.lower():
+                time = time + ' - Access denied'
+                break
+
+        if ip_found == False:
+            time = 'Err: Page loaded but proxy failed'
+        return time
 
     def error_handler(self, e):
         if 'Cannot connect' in str(e):
-            time = 'Cannot connect to proxy'
+            time = 'Err: Cannot connect to proxy'
         elif 'timed out' in str(e).lower():
-            time = 'Timed out'
+            time = 'Err: Timed out'
         elif 'retries exceeded' in str(e):
-            time = 'Max retries exceeded'
+            time = 'Err: Max retries exceeded'
         elif 'Connection reset by peer' in str(e):
-            time = 'Connection reset by peer'
+            time = 'Err: Connection reset by peer'
         elif 'readline() takes exactly 1 argument (2 given)' in str(e):
-            time = 'SSL error'
+            time = 'Err: SSL error'
         else:
             time = 'Err: '+str(e)
         return time
@@ -169,21 +229,34 @@ class find_http_proxy():
             url = 'https://astrill.com'
         return url
 
-    def printer(self, results):
-    #def printer(self, times):
-        print '---------------------------------------------------------------'
+    def passed_all_tests(self, results):
         for r in results:
+            time = r[0]
+            if 'Err:' in time:
+                return False
+        return True
+
+    def printer(self, results):
+        ''' Creates the output '''
+        counter = 0
+        print '-------------------------------------------------------------------'
+        for r in results:
+            counter += 1
             time = r[0]
             proxy = r[1]
             url = r[2]
-            print '%s | %s - %s' % (proxy.ljust(21), url.ljust(20), time)
+            country_code = r[3]
+
+            # Only print the proxy once, on the second print job
+            if counter == 2:
+                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code, url.ljust(20), time)
+            else:
+                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(20), time)
 
     def limiter(self):
         ''' Kill the script if user supplied limit of successful proxy attempts (-s argument) is reached '''
-        if self.show:
-            self.proxy_counter += 1
-            if self.proxy_counter == int(self.show):
-                sys.exit()
+        if self.print_counter >= int(self.show_num):
+            sys.exit()
 
 P = find_http_proxy(parse_args())
 P.run()
