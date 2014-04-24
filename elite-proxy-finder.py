@@ -46,8 +46,9 @@ class find_http_proxy():
         self.proxy_list.append(gatherproxy_list)
         # Flatten list of lists (1 master list containing 1 list of ips per proxy website)
         self.proxy_list = [ips for proxy_site in self.proxy_list for ips in proxy_site]
+        self.proxy_list = list(set(self.proxy_list)) # Remove duplicates
 
-        print '[*] %d high anonymity proxies found' % len(self.proxy_list)
+        print '[*] %d unique high anonymity proxies found' % len(self.proxy_list)
         print '[*] Testing proxy speeds ...'
         print ''
         print '      Proxy           | CC  |       Domain         | Time/Errors'
@@ -124,15 +125,14 @@ class find_http_proxy():
 
     def proxy_checker_req(self, proxy):
         ''' See how long each proxy takes to open each URL '''
-        urls = ['http://www.ipchicken.com', 'http://whatsmyip.net/', 'https://www.astrill.com/what-is-my-ip-address.php']
         proxyip = str(proxy.split(':', 1)[0])
-        country_code = self.get_country_code(proxyip)
 
         # A lot of proxy checker sites give a different final octet for some reason
         proxy_split = proxyip.split('.')
         first_3_octets = '.'.join(proxy_split[:3])+'.'
 
         results = []
+        urls = ['http://www.ipchicken.com', 'http://whatsmyip.net/', 'https://www.astrill.com/what-is-my-ip-address.php']
         for url in urls:
             try:
                 check = requests.get(url,
@@ -147,28 +147,49 @@ class find_http_proxy():
                 time = self.check_ip_on_page(time, html_lines, first_3_octets)
                 url = self.url_shortener(url)
 
-                results.append((time, proxy, url, country_code))
+                results.append((time, proxy, url))
 
             except Exception as e:
                 #raise
                 time = self.error_handler(e)
                 url = self.url_shortener(url)
-                results.append((time, proxy, url, country_code))
+                results.append((time, proxy, url))
 
-        self.print_handler(results)
+        self.print_handler(results, proxyip)
 
-    def print_handler(self, results):
+    def print_handler(self, results, proxyip):
         if self.show_all:
-            self.printer(results)
+            country_code = self.get_country_code(proxyip)
+            self.printer(results, country_code)
             self.print_counter += 1
         else:
             passed_all = self.passed_all_tests(results)
             if passed_all:
-                self.printer(results)
+                country_code = self.get_country_code(proxyip)
+                self.printer(results, country_code)
                 self.print_counter += 1
 
         if self.show_num:
             self.limiter()
+
+
+    def printer(self, results, country_code):
+        ''' Creates the output '''
+        counter = 0
+        print '-------------------------------------------------------------------'
+        for r in results:
+            counter += 1
+            time = r[0]
+            proxy = r[1]
+            url = r[2]
+            #country_code = r[3]
+
+            # Only print the proxy once, on the second print job
+            if counter == 2:
+                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code, url.ljust(20), time)
+                #print '%s | %s | %s | %s' % (proxy.ljust(21), '   ', url.ljust(20), time)
+            else:
+                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(20), time)
 
     def get_country_code(self, proxyip):
         ''' Get the 3 letter country code of the proxy using geoiptool.com
@@ -186,6 +207,9 @@ class find_http_proxy():
                 break
             if 'country code:' in l.lower():
                 cc_line_found = True
+
+        #if cc == 'N/A':
+        #    print proxyip, html
         return cc
 
     def check_ip_on_page(self, time, html_lines, first_3_octets):
@@ -235,23 +259,6 @@ class find_http_proxy():
             if 'Err:' in time:
                 return False
         return True
-
-    def printer(self, results):
-        ''' Creates the output '''
-        counter = 0
-        print '-------------------------------------------------------------------'
-        for r in results:
-            counter += 1
-            time = r[0]
-            proxy = r[1]
-            url = r[2]
-            country_code = r[3]
-
-            # Only print the proxy once, on the second print job
-            if counter == 2:
-                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code, url.ljust(20), time)
-            else:
-                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(20), time)
 
     def limiter(self):
         ''' Kill the script if user supplied limit of successful proxy attempts (-s argument) is reached '''
