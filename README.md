@@ -19,12 +19,15 @@ pip install --upgrade gevent
 Usage:
 ------
 ```python elite-proxy-finder.py```
+
 Show proxies that pass all three tests, their country code, and the time it took for each request to complete. Prints the fastest proxies first.
 
 ```python elite-proxy-finder.py -s 10```
+
 Show only the fastest 10 proxy results.
 
 ```python elite-proxy-finder.py -a```
+
 Show all proxy results including the errors that occurred.
 
 
