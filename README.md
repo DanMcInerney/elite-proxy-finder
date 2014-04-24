@@ -11,10 +11,10 @@ Requirements:
   * requests
 
 Kali has gevent 0.13 in its repo and you will need gevent 1.0 if you want the -s option to work. Works fine with 0.13 other than that.
-```shell
+```
 apt-get install python-dev gevent
 pip install --upgrade gevent
-
+```
 
 Usage:
 ------
