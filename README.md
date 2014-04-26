@@ -1,7 +1,7 @@
 elite-proxy-finder
 ==================
 
-Finds elite anonymity (L1) HTTP proxies using gatherproxy.com and letushide.com then test them all in parallel. Scrapes 25 L1 proxies which were checked on by gatherproxy.com within the last 2-5 minutes and all L1 proxies checked within the last 3 days by letushide.com. Tests them all against 3 IP checking URLs including one which is HTTPS to check for compatibility with that protocol. By default the script will only print the proxy IP, request time, and country code of proxies that pass all three tests but you can see the results including errors in any of the tests with the -a (--all) option. 
+Finds elite anonymity (L1) HTTP proxies then test them all in parallel. Tests each proxy against 3 IP checking URLs including one which is HTTPS and then checks the proxy headers to confirm it's an elite L1 proxy which will not leak any extra info. By default the script will only print the proxy IP, request time, and country code of proxies that pass all three tests but you can see the results including errors in any of the tests with the -a (--all) option. 
 
 Requirements:
 ------
