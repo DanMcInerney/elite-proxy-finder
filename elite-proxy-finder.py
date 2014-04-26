@@ -1,5 +1,8 @@
 #!/usr/bin/env python2
 
+''' gatherproxy.com has a login now but keeping the code in here in case they come back '''
+__author__ = 'Dan McInerney'
+
 from gevent import monkey
 monkey.patch_all()
 
@@ -7,11 +10,14 @@ import requests
 import ast
 import gevent
 import sys, re, time, os, argparse
+import socket
+from BeautifulSoup import BeautifulSoup
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--show', help='Show this number of results. Example: "-s 5" will show the 5 fastest proxies then stop')
     parser.add_argument('-a', '--all', help='Show all proxy results including the ones that failed 1 of the 3 tests', action='store_true')
+    parser.add_argument('-o', '--one', help='Only print the IP:port of the single fastest proxy that passes all the tests', action='store_true')
     return parser.parse_args()
 
 class find_http_proxy():
@@ -20,30 +26,40 @@ class find_http_proxy():
     that you are using a proxy at all '''
 
     def __init__(self, args):
-        self.checked_proxies = []
         self.proxy_list = []
         self.headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'}
         self.show_num = args.show
         self.show_all = args.all
         self.errors = []
         self.print_counter = 0
+        self.externalip = self.external_ip()
+
+    def external_ip(self):
+        req = requests.get('http://myip.dnsdynamic.org/')
+        ip = req.text
+        return ip
 
     def run(self):
         ''' Gets raw high anonymity (L1) proxy data then calls make_proxy_list()
         Currently parses data from gatherproxy.com and letushide.com '''
 
-        try:
-            letushide_list = self.letushide_req()
-        except Exception:
-            print '[!] Failed to get proxy list from letushide.com'
+        print '[*] Your accurate external IP: %s' % self.externalip
 
-        try:
-            gatherproxy_list = self.gatherproxy_req()
-        except Exception:
-            print '[!] Failed to get proxy list from gatherproxy.com'
+        letushide_list = self.letushide_req()
+        print '[*] letushide.com: %s proxies' % str(len(letushide_list))
+
+         # Has a login now :(
+#        gatherproxy_list = self.gatherproxy_req()
+#        print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
+
+        checkerproxy_list = self.checkerproxy_req()
+        print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
+        #print '[!] Failed to get proxy list from checkerproxy.com'
 
         self.proxy_list.append(letushide_list)
-        self.proxy_list.append(gatherproxy_list)
+        #self.proxy_list.append(gatherproxy_list)
+        self.proxy_list.append(checkerproxy_list)
+
         # Flatten list of lists (1 master list containing 1 list of ips per proxy website)
         self.proxy_list = [ips for proxy_site in self.proxy_list for ips in proxy_site]
         self.proxy_list = list(set(self.proxy_list)) # Remove duplicates
@@ -51,9 +67,50 @@ class find_http_proxy():
         print '[*] %d unique high anonymity proxies found' % len(self.proxy_list)
         print '[*] Testing proxy speeds ...'
         print ''
-        print '      Proxy           | CC  |       Domain         | Time/Errors'
+        print '      Proxy           | CC  |       Domain          | Time/Errors'
 
         self.proxy_checker()
+
+    def checkerproxy_req(self):
+        ''' Make the request to checkerproxy and create a master list from that site '''
+        cp_ips = []
+        try:
+            url = 'http://checkerproxy.net/all_proxy'
+            r = requests.get(url, headers=self.headers)
+            html = r.text
+        except Exception:
+            print '[!] Failed to get reply from %s' % url
+            checkerproxy_list = []
+            return checkerproxy_list
+
+        checkerproxy_list = self.parse_checkerproxy(html)
+        return checkerproxy_list
+
+    def parse_checkerproxy(self, html):
+        ''' Only get elite proxies from checkerproxy '''
+        ips = []
+        soup = BeautifulSoup(html)
+        for tr in soup.findAll('tr'):
+            if len(tr) == 19:
+                ip_found = False
+                elite = False
+                ip_port = None
+                tds = tr.findAll('td')
+                for td in tds:
+                    if ':' in td.text:
+                        ip_found = True
+                        ip_port_re = re.match('(\d{1,3}\.){3}\d{1,3}:\d{1,5}', td.text)
+                        if ip_port_re:
+                            ip_port = ip_port_re.group()
+                        if not ip_port:
+                            ip_found = False
+                    if 'Elite' in td.text:
+                        elite = True
+                    if ip_found == True and elite == True:
+                        ips.append(str(ip_port))
+                        break
+        return ips
+
 
     def letushide_req(self):
         ''' Make the request to the proxy site and create a master list from that site '''
@@ -93,27 +150,35 @@ class find_http_proxy():
             ips.append(ip)
         return ips
 
-    def gatherproxy_req(self):
-        r = requests.get('http://gatherproxy.com/proxylist/anonymity/?t=Elite', headers = self.headers)
-        lines = r.text.splitlines()
-        gatherproxy_list = self.parse_gp(lines)
-        return gatherproxy_list
+#    def gatherproxy_req(self):
+#        url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
+#        try:
+#            r = requests.get(url, headers = self.headers)
+#            print r.text
+#            lines = r.text.splitlines()
+#        except:
+#            print '[!] Failed get reply from %s' % url
+#            gatherproxy_list = []
+#            return gatherproxy_list
+#
+#        gatherproxy_list = self.parse_gp(lines)
+#        return gatherproxy_list
 
-    def parse_gp(self, lines):
-        ''' Parse the raw scraped data '''
-        gatherproxy_list = []
-        for l in lines:
-            if 'proxy_ip' in l.lower():
-                l = l.replace('gp.insertPrx(', '')
-                l = l.replace(');', '')
-                l = l.replace('null', 'None')
-                l = l.strip()
-                l = ast.literal_eval(l)
-
-                proxy = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
-                gatherproxy_list.append(proxy)
-                #ctry = l["PROXY_COUNTRY"]
-        return gatherproxy_list
+#    def parse_gp(self, lines):
+#        ''' Parse the raw scraped data '''
+#        gatherproxy_list = []
+#        for l in lines:
+#            if 'proxy_ip' in l.lower():
+#                l = l.replace('gp.insertPrx(', '')
+#                l = l.replace(');', '')
+#                l = l.replace('null', 'None')
+#                l = l.strip()
+#                l = ast.literal_eval(l)
+#
+#                proxy = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
+#                gatherproxy_list.append(proxy)
+#                #ctry = l["PROXY_COUNTRY"]
+#        return gatherproxy_list
 
     def proxy_checker(self):
         ''' Concurrency stuff here '''
@@ -132,7 +197,7 @@ class find_http_proxy():
         first_3_octets = '.'.join(proxy_split[:3])+'.'
 
         results = []
-        urls = ['http://www.ipchicken.com', 'http://whatsmyip.net/', 'https://www.astrill.com/what-is-my-ip-address.php']
+        urls = ['http://wtfismyip.com/text', 'http://myip.dnsdynamic.org', 'https://www.astrill.com/what-is-my-ip-address.php', 'http://wtfismyip.com/headers']
         for url in urls:
             try:
                 check = requests.get(url,
@@ -141,21 +206,53 @@ class find_http_proxy():
                                                'https':'http://'+proxy},
                                     timeout = 15)
 
-                time = str(check.elapsed)
+                time_or_error = str(check.elapsed)
                 html = check.text
-                html_lines = html.splitlines()
-                time = self.check_ip_on_page(time, html_lines, first_3_octets)
+                time_or_error = self.html_handler(time_or_error, html, url)
                 url = self.url_shortener(url)
-
-                results.append((time, proxy, url))
+                results.append((time_or_error, proxy, url))
 
             except Exception as e:
-                #raise
-                time = self.error_handler(e)
+                time_or_error = self.error_handler(str(e))
                 url = self.url_shortener(url)
-                results.append((time, proxy, url))
+                results.append((time_or_error, proxy, url))
 
         self.print_handler(results, proxyip)
+
+    def html_handler(self, time_or_error, html, url):
+        ''' Check the html for errors and if none are found return time to load page '''
+
+        html_lines = html.splitlines()
+        leng = len(html_lines)
+
+        # Both of these urls just return the ip and nothing else
+        if url in ['http://wtfismyip.com/text', 'http://myip.dnsdynamic.org']:
+            if leng == 1:  # Should return 1 line of html
+                if self.externalip in html:
+                    time_or_error = 'Err: Page loaded; proxy failed'
+            else:
+                time_or_error = 'Err: Page loaded; proxy failed'
+            return time_or_error
+
+        # This is the SSL page
+        if 'astrill' in url:
+            soup = BeautifulSoup(html)
+            ip = soup.find("td", { "colspan": 2 }).text # the ip is the only on with colspan = 2
+            if self.externalip in ip:
+                time_or_error = 'Err: Page loaded; proxy failed'
+            return time_or_error
+
+        if '/headers' in url:
+            # check for proxy headers
+            proxy_headers = ['via: ', 'forwarded: ', 'x-forwarded-for', 'client-ip']
+            if leng < 12: # 12 is arbitrary, I just don't think you'll ever see more than 12 headers
+                for l in html_lines:
+                    for h in proxy_headers:
+                        if h in l.lower():
+                            time_or_error = 'Err: Proxy headers found'
+                            return time_or_error
+            time_or_error = 'Passed: elite proxy'
+            return time_or_error
 
     def print_handler(self, results, proxyip):
         if self.show_all:
@@ -172,24 +269,21 @@ class find_http_proxy():
         if self.show_num:
             self.limiter()
 
-
     def printer(self, results, country_code):
         ''' Creates the output '''
         counter = 0
-        print '-------------------------------------------------------------------'
+        print '--------------------------------------------------------------------'
         for r in results:
             counter += 1
-            time = r[0]
+            time_or_error = r[0]
             proxy = r[1]
             url = r[2]
-            #country_code = r[3]
 
             # Only print the proxy once, on the second print job
-            if counter == 2:
-                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code, url.ljust(20), time)
-                #print '%s | %s | %s | %s' % (proxy.ljust(21), '   ', url.ljust(20), time)
+            if counter == 1:
+                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code.ljust(3), url.ljust(21), time_or_error)
             else:
-                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(20), time)
+                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(21), time_or_error)
 
     def get_country_code(self, proxyip):
         ''' Get the 3 letter country code of the proxy using geoiptool.com
@@ -208,55 +302,38 @@ class find_http_proxy():
             if 'country code:' in l.lower():
                 cc_line_found = True
 
-        #if cc == 'N/A':
-        #    print proxyip, html
         return cc
 
-    def check_ip_on_page(self, time, html_lines, first_3_octets):
-        ''' Check for the IP on the page, for a captcha, and for 'access denied' mesg '''
-        ip_found = False
-
-        for l in html_lines:
-            if first_3_octets in l:
-                ip_found = True
-            if 'captcha' in l.lower():
-                time = time + ' - Captcha detected'
-            if 'access denied' in l.lower():
-                time = time + ' - Access denied'
-                break
-
-        if ip_found == False:
-            time = 'Err: Page loaded but proxy failed'
-        return time
-
     def error_handler(self, e):
-        if 'Cannot connect' in str(e):
-            time = 'Err: Cannot connect to proxy'
-        elif 'timed out' in str(e).lower():
-            time = 'Err: Timed out'
-        elif 'retries exceeded' in str(e):
-            time = 'Err: Max retries exceeded'
-        elif 'Connection reset by peer' in str(e):
-            time = 'Err: Connection reset by peer'
-        elif 'readline() takes exactly 1 argument (2 given)' in str(e):
-            time = 'Err: SSL error'
+        if 'Cannot connect' in e:
+            time_or_error = 'Err: Cannot connect to proxy'
+        elif 'timed out' in e.lower():
+            time_or_error = 'Err: Timed out'
+        elif 'retries exceeded' in e:
+            time_or_error = 'Err: Max retries exceeded'
+        elif 'Connection reset by peer' in e:
+            time_or_error = 'Err: Connection reset by peer'
+        elif 'readline() takes exactly 1 argument (2 given)' in e:
+            time_or_error = 'Err: SSL error'
         else:
-            time = 'Err: '+str(e)
-        return time
+            time_or_error = 'Err: ' + e
+        return time_or_error
 
     def url_shortener(self, url):
-        if 'ipchicken' in url:
-            url = 'http://ipchicken.com'
-        elif 'whatsmyip' in url:
-            url = 'http://whatsmyip.net'
+        if 'wtfismyip.com/text' in url:
+            url = 'http://wtfismyip.com'
+        elif 'wtfismyip.com/headers' in url:
+            url = 'Header check'
+        elif 'dnsdynamic' in url:
+            url = 'http://dnsdynamic.org'
         elif 'astrill' in url:
             url = 'https://astrill.com'
         return url
 
     def passed_all_tests(self, results):
         for r in results:
-            time = r[0]
-            if 'Err:' in time:
+            time_or_error= r[0]
+            if 'Err:' in time_or_error:
                 return False
         return True
 
