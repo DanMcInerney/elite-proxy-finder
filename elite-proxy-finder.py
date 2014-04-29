@@ -35,7 +35,7 @@ class find_http_proxy():
         self.externalip = self.external_ip()
 
     def external_ip(self):
-        req = requests.get('http://myip.dnsdynamic.org/')
+        req = requests.get('http://myip.dnsdynamic.org/', headers=self.headers)
         ip = req.text
         return ip
 
@@ -291,7 +291,7 @@ class find_http_proxy():
         cc = 'N/A'
 
         try:
-            r = requests.get('http://www.geoiptool.com/en/?IP=%s' % proxyip)
+            r = requests.get('http://www.geoiptool.com/en/?IP=%s' % proxyip, headers=self.headers)
             html = r.text
             html_lines = html.splitlines()
             for l in html_lines:
