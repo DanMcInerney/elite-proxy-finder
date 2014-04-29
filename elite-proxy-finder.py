@@ -49,15 +49,14 @@ class find_http_proxy():
         print '[*] letushide.com: %s proxies' % str(len(letushide_list))
 
          # Has a login now :(
-#        gatherproxy_list = self.gatherproxy_req()
-#        print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
+        gatherproxy_list = self.gatherproxy_req()
+        print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
 
         checkerproxy_list = self.checkerproxy_req()
         print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
-        #print '[!] Failed to get proxy list from checkerproxy.com'
 
         self.proxy_list.append(letushide_list)
-        #self.proxy_list.append(gatherproxy_list)
+        self.proxy_list.append(gatherproxy_list)
         self.proxy_list.append(checkerproxy_list)
 
         # Flatten list of lists (1 master list containing 1 list of ips per proxy website)
@@ -150,35 +149,34 @@ class find_http_proxy():
             ips.append(ip)
         return ips
 
-#    def gatherproxy_req(self):
-#        url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
-#        try:
-#            r = requests.get(url, headers = self.headers)
-#            print r.text
-#            lines = r.text.splitlines()
-#        except:
-#            print '[!] Failed get reply from %s' % url
-#            gatherproxy_list = []
-#            return gatherproxy_list
-#
-#        gatherproxy_list = self.parse_gp(lines)
-#        return gatherproxy_list
+    def gatherproxy_req(self):
+        url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
+        try:
+            r = requests.get(url, headers = self.headers)
+            lines = r.text.splitlines()
+        except:
+            print '[!] Failed get reply from %s' % url
+            gatherproxy_list = []
+            return gatherproxy_list
 
-#    def parse_gp(self, lines):
-#        ''' Parse the raw scraped data '''
-#        gatherproxy_list = []
-#        for l in lines:
-#            if 'proxy_ip' in l.lower():
-#                l = l.replace('gp.insertPrx(', '')
-#                l = l.replace(');', '')
-#                l = l.replace('null', 'None')
-#                l = l.strip()
-#                l = ast.literal_eval(l)
-#
-#                proxy = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
-#                gatherproxy_list.append(proxy)
-#                #ctry = l["PROXY_COUNTRY"]
-#        return gatherproxy_list
+        gatherproxy_list = self.parse_gp(lines)
+        return gatherproxy_list
+
+    def parse_gp(self, lines):
+        ''' Parse the raw scraped data '''
+        gatherproxy_list = []
+        for l in lines:
+            if 'proxy_ip' in l.lower():
+                l = l.replace('gp.insertPrx(', '')
+                l = l.replace(');', '')
+                l = l.replace('null', 'None')
+                l = l.strip()
+                l = ast.literal_eval(l)
+
+                proxy = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
+                gatherproxy_list.append(proxy)
+                #ctry = l["PROXY_COUNTRY"]
+        return gatherproxy_list
 
     def proxy_checker(self):
         ''' Concurrency stuff here '''
