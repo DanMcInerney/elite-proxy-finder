@@ -1,7 +1,7 @@
 elite-proxy-finder
 ==================
 
-Finds elite anonymity (L1) HTTP proxies then test them all in parallel. Tests each proxy against 3 IP checking URLs including one which is HTTPS and then checks the proxy headers to confirm it's an elite L1 proxy which will not leak any extra info. By default the script will only print the proxy IP, request time, and country code of proxies that pass all three tests but you can see the results including errors in any of the tests with the -a (--all) option. 
+Finds elite anonymity (L1) HTTP proxies then test them all in parallel. Tests each proxy against 3 IP checking URLs including one which is HTTPS to make sure it can handle HTTPS requests and then checks the proxy headers to confirm it's an elite L1 proxy that will not leak any extra info. By default the script will only print the proxy IP, request time, and country code of proxies that pass all four tests but you can see all the results including errors in any of the tests with the -a (--all) option. 
 
 Requirements:
 ------
@@ -20,7 +20,7 @@ Usage:
 ------
 ```python elite-proxy-finder.py```
 
-Show proxies that pass all three tests, their country code, and the time it took for each request to complete. Prints the fastest proxies first.
+Show proxies that pass all four tests, their country code, and the time it took for each request to complete. Prints the fastest proxies first.
 
 ```python elite-proxy-finder.py -s 10```
 
