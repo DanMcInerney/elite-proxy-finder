@@ -290,16 +290,18 @@ class find_http_proxy():
         cc_line_found = False
         cc = 'N/A'
 
-        r = requests.get('http://www.geoiptool.com/en/?IP=%s' % proxyip)
-        html = r.text
-        html_lines = html.splitlines()
-        for l in html_lines:
-            if cc_line_found == True:
-                cc = l.split('(', 1)[1].split(')', 1)[0]
-                break
-            if 'country code:' in l.lower():
-                cc_line_found = True
-
+        try:
+            r = requests.get('http://www.geoiptool.com/en/?IP=%s' % proxyip)
+            html = r.text
+            html_lines = html.splitlines()
+            for l in html_lines:
+                if cc_line_found == True:
+                    cc = l.split('(', 1)[1].split(')', 1)[0]
+                    break
+                if 'country code:' in l.lower():
+                    cc_line_found = True
+        except:
+            pass
         return cc
 
     def error_handler(self, e):
