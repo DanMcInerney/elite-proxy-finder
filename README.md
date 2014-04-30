@@ -1,14 +1,14 @@
 elite-proxy-finder
 ==================
 
-Finds elite anonymity (L1) HTTP proxies then test them all in parallel. Tests each proxy against 3 IP checking URLs including one which is HTTPS to make sure it can handle HTTPS requests and then checks the proxy headers to confirm it's an elite L1 proxy that will not leak any extra info. By default the script will only print the proxy IP, request time, and country code of proxies that pass all four tests but you can see all the results including errors in any of the tests with the -a (--all) option. 
+Finds elite anonymity (L1) HTTP proxies then tests them all in parallel. Tests each proxy against 3 IP checking URLs including one which is HTTPS to make sure it can handle HTTPS requests. Then checks the proxy headers to confirm it's an elite L1 proxy that will not leak any extra info. By default the script will only print the proxy IP, request time, and country code of proxies that pass all four tests but you can see all the results including errors in any of the tests with the -a (--all) option. 
 
 Requirements:
 ------
 * Tested on Kali 1.0.6
 * Python 2.7
-  * gevent
-  * requests
+  * gevent 1.0
+  * requests 1.2.0+
 
 Kali has gevent 0.13 in its repo and you will need gevent 1.0 if you want the -s option to work. Works fine with 0.13 other than that.
 ```
