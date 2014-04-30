@@ -1,7 +1,11 @@
 #!/usr/bin/env python2
 
-''' gatherproxy.com has a login now but keeping the code in here in case they come back '''
+'''Finds hundreds of elite anonymity (L1) HTTP proxies then tests them all in parallel printing the fastest ones first.
+Checks headers to confirm eliteness, checks if compatible with opening HTTPS sites, and confirms the proxy is working
+through multiple IP checking sites'''
+
 __author__ = 'Dan McInerney'
+__contact__ = 'danhmcinerney gmail'
 
 from gevent import monkey
 monkey.patch_all()
