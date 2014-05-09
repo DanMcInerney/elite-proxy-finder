@@ -12,7 +12,7 @@ Requirements:
 
 Kali has gevent 0.13 in its repo and you will need gevent 1.0 if you want the -s option to work. Works fine with 0.13 other than that.
 ```
-apt-get install python-dev gevent
+apt-get install python-dev python-gevent
 pip install --upgrade gevent
 ```
 
