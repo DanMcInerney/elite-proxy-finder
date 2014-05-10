@@ -8,7 +8,9 @@ Requirements:
 * Tested on Kali 1.0.6
 * Python 2.7
   * gevent 1.0
-  * requests 1.2.0+
+  * requests 1.2.0+ 
+
+If you are on a system with requests <1.2.0 you won't see any output because every test will result in an error referring to the request not having an attribute "elapsed". Use the -a option to check the errors.
 
 Kali has gevent 0.13 in its repo and you will need gevent 1.0 if you want the -s option to work. Works fine with 0.13 other than that.
 ```
