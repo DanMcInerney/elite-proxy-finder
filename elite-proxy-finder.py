@@ -4,6 +4,9 @@
 Checks headers to confirm eliteness, checks if compatible with opening HTTPS sites, and confirms the proxy is working
 through multiple IP checking sites'''
 
+# TO DO:
+#   -Add http://free-proxy-list.net/
+
 __author__ = 'Dan McInerney'
 __contact__ = 'danhmcinerney gmail'
 
@@ -21,7 +24,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--show', help='Show this number of results. Example: "-s 5" will show the 5 fastest proxies then stop')
     parser.add_argument('-a', '--all', help='Show all proxy results including the ones that failed 1 of the 3 tests', action='store_true')
-    parser.add_argument('-o', '--one', help='Only print the IP:port of the single fastest proxy that passes all the tests', action='store_true')
+    parser.add_argument('-q', '--quiet', help='Only print the IP:port of the fastest proxies that pass all the tests', action='store_true')
     return parser.parse_args()
 
 class find_http_proxy():
@@ -34,6 +37,7 @@ class find_http_proxy():
         self.headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.154 Safari/537.36'}
         self.show_num = args.show
         self.show_all = args.all
+        self.quiet = args.quiet
         self.errors = []
         self.print_counter = 0
         self.externalip = self.external_ip()
@@ -47,17 +51,21 @@ class find_http_proxy():
         ''' Gets raw high anonymity (L1) proxy data then calls make_proxy_list()
         Currently parses data from gatherproxy.com and letushide.com '''
 
-        print '[*] Your accurate external IP: %s' % self.externalip
+        if not self.quiet:
+            print '[*] Your accurate external IP: %s' % self.externalip
 
         letushide_list = self.letushide_req()
-        print '[*] letushide.com: %s proxies' % str(len(letushide_list))
+        if not self.quiet:
+            print '[*] letushide.com: %s proxies' % str(len(letushide_list))
 
          # Has a login now :(
         gatherproxy_list = self.gatherproxy_req()
-        print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
+        if not self.quiet:
+            print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
 
         checkerproxy_list = self.checkerproxy_req()
-        print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
+        if not self.quiet:
+            print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
 
         self.proxy_list.append(letushide_list)
         self.proxy_list.append(gatherproxy_list)
@@ -67,10 +75,11 @@ class find_http_proxy():
         self.proxy_list = [ips for proxy_site in self.proxy_list for ips in proxy_site]
         self.proxy_list = list(set(self.proxy_list)) # Remove duplicates
 
-        print '[*] %d unique high anonymity proxies found' % len(self.proxy_list)
-        print '[*] Testing proxy speeds ...'
-        print ''
-        print '      Proxy           | CC  |       Domain          | Time/Errors'
+        if not self.quiet:
+            print '[*] %d unique high anonymity proxies found' % len(self.proxy_list)
+            print '[*] Testing proxy speeds ...'
+            print ''
+            print '      Proxy           | CC  |       Domain          | Time/Errors'
 
         self.proxy_checker()
 
@@ -274,18 +283,23 @@ class find_http_proxy():
     def printer(self, results, country_code):
         ''' Creates the output '''
         counter = 0
-        print '--------------------------------------------------------------------'
+        if not self.quiet:
+            print '--------------------------------------------------------------------'
         for r in results:
             counter += 1
             time_or_error = r[0]
             proxy = r[1]
             url = r[2]
 
-            # Only print the proxy once, on the second print job
-            if counter == 1:
-                print '%s | %s | %s | %s' % (proxy.ljust(21), country_code.ljust(3), url.ljust(21), time_or_error)
+            if self.quiet:
+                if counter % 4 == 0: #################### THIS results is a list of 4 tuples each, so proxies will repeat 4 times
+                    print proxy
             else:
-                print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(21), time_or_error)
+                # Only print the proxy once, on the second print job
+                if counter == 1:
+                    print '%s | %s | %s | %s' % (proxy.ljust(21), country_code.ljust(3), url.ljust(21), time_or_error)
+                else:
+                    print '%s | %s | %s | %s' % (' '.ljust(21), '   ', url.ljust(21), time_or_error)
 
     def get_country_code(self, proxyip):
         ''' Get the 3 letter country code of the proxy using geoiptool.com

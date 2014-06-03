@@ -32,6 +32,10 @@ Show only the fastest 10 proxy results.
 
 Show all proxy results including the errors that occurred.
 
+```python elite-proxy-finder.py -q```
+
+Print only the IP address and port of proxies that pass all four tests.
+
 
 
 License
