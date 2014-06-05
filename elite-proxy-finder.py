@@ -5,7 +5,8 @@ Checks headers to confirm eliteness, checks if compatible with opening HTTPS sit
 through multiple IP checking sites'''
 
 # TO DO:
-#   -Add http://free-proxy-list.net/
+# -Add http://free-proxy-list.net/
+# -Add hidemyass
 
 __author__ = 'Dan McInerney'
 __contact__ = 'danhmcinerney gmail'
@@ -204,11 +205,11 @@ class find_http_proxy():
         proxyip = str(proxy.split(':', 1)[0])
 
         # A lot of proxy checker sites give a different final octet for some reason
-        proxy_split = proxyip.split('.')
-        first_3_octets = '.'.join(proxy_split[:3])+'.'
+        #proxy_split = proxyip.split('.')
+        #first_3_octets = '.'.join(proxy_split[:3])+'.'
 
         results = []
-        urls = ['http://wtfismyip.com/text', 'http://myip.dnsdynamic.org', 'https://www.astrill.com/what-is-my-ip-address.php', 'http://wtfismyip.com/headers']
+        urls = ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org', 'https://www.astrill.com/what-is-my-ip-address.php', 'http://danmcinerney.org/headers.php']
         for url in urls:
             try:
                 check = requests.get(url,
@@ -237,7 +238,7 @@ class find_http_proxy():
         leng = len(html_lines)
 
         # Both of these urls just return the ip and nothing else
-        if url in ['http://wtfismyip.com/text', 'http://myip.dnsdynamic.org']:
+        if url in ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org']:
             if leng == 1:  # Should return 1 line of html
                 if self.externalip in html:
                     time_or_error = 'Err: Page loaded; proxy failed'
@@ -256,12 +257,14 @@ class find_http_proxy():
         if '/headers' in url:
             # check for proxy headers
             proxy_headers = ['via: ', 'forwarded: ', 'x-forwarded-for', 'client-ip']
-            if leng < 12: # 12 is arbitrary, I just don't think you'll ever see more than 12 headers
-                for l in html_lines:
-                    for h in proxy_headers:
-                        if h in l.lower():
-                            time_or_error = 'Err: Proxy headers found'
-                            return time_or_error
+            if leng > 15: # 15 is arbitrary, I just don't think you'll ever see more than 15 headers
+                time_or_error = 'Err: headers not returned'
+                return time_or_error
+            for l in html_lines:
+                for h in proxy_headers:
+                    if h in l.lower():
+                        time_or_error = 'Err: Proxy headers found'
+                        return time_or_error
             time_or_error = 'Passed: elite proxy'
             return time_or_error
 
@@ -338,12 +341,12 @@ class find_http_proxy():
         return time_or_error
 
     def url_shortener(self, url):
-        if 'wtfismyip.com/text' in url:
-            url = 'http://wtfismyip.com'
-        elif 'wtfismyip.com/headers' in url:
+        if 'ip.php' in url:
+            url = 'danmcinerney.org'
+        elif 'headers.php' in url:
             url = 'Header check'
         elif 'dnsdynamic' in url:
-            url = 'http://dnsdynamic.org'
+            url = 'dnsdynamic.org'
         elif 'astrill' in url:
             url = 'https://astrill.com'
         return url
