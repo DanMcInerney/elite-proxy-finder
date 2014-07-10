@@ -7,6 +7,7 @@ through multiple IP checking sites'''
 # TO DO:
 # -Add http://free-proxy-list.net/
 # -Add hidemyass
+#from IPython import embed
 
 __author__ = 'Dan McInerney'
 __contact__ = 'danhmcinerney gmail'
@@ -124,7 +125,6 @@ class find_http_proxy():
                         break
         return ips
 
-
     def letushide_req(self):
         ''' Make the request to the proxy site and create a master list from that site '''
         letushide_ips = []
@@ -236,11 +236,16 @@ class find_http_proxy():
 
         html_lines = html.splitlines()
         leng = len(html_lines)
+        ipre = '(?:[0-9]{1,3}\.){3}[0-9]{1,3}'
 
         # Both of these urls just return the ip and nothing else
         if url in ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org']:
             if leng == 1:  # Should return 1 line of html
-                if self.externalip in html:
+                match = re.match(ipre, html)
+                if match:
+                    if self.externalip in html:
+                        time_or_error = 'Err: Page loaded; proxy failed'
+                else:
                     time_or_error = 'Err: Page loaded; proxy failed'
             else:
                 time_or_error = 'Err: Page loaded; proxy failed'
@@ -250,7 +255,11 @@ class find_http_proxy():
         if 'astrill' in url:
             soup = BeautifulSoup(html)
             ip = soup.find("td", { "colspan": 2 }).text # the ip is the only on with colspan = 2
-            if self.externalip in ip:
+            match = re.match(ipre, ip)
+            if match:
+                if self.externalip in ip:
+                    time_or_error = 'Err: Page loaded; proxy failed'
+            else:
                 time_or_error = 'Err: Page loaded; proxy failed'
             return time_or_error
 
