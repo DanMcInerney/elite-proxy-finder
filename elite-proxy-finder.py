@@ -17,6 +17,7 @@ monkey.patch_all()
 
 import requests
 import ast
+import copy
 import gevent
 import sys, re, time, os, argparse
 import socket
@@ -56,22 +57,22 @@ class find_http_proxy():
         if not self.quiet:
             print '[*] Your accurate external IP: %s' % self.externalip
 
-        letushide_list = self.letushide_req()
-        if not self.quiet:
-            print '[*] letushide.com: %s proxies' % str(len(letushide_list))
+        #letushide_list = self.letushide_req()
+        #if not self.quiet:
+        #    print '[*] letushide.com: %s proxies' % str(len(letushide_list))
 
          # Has a login now :(
         gatherproxy_list = self.gatherproxy_req()
         if not self.quiet:
             print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
 
-        checkerproxy_list = self.checkerproxy_req()
-        if not self.quiet:
-            print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
+        #checkerproxy_list = self.checkerproxy_req()
+        #if not self.quiet:
+        #    print '[*] checkerproxy.net: %s proxies' % str(len(checkerproxy_list))
 
-        self.proxy_list.append(letushide_list)
+        #self.proxy_list.append(letushide_list)
         self.proxy_list.append(gatherproxy_list)
-        self.proxy_list.append(checkerproxy_list)
+        #self.proxy_list.append(checkerproxy_list)
 
         # Flatten list of lists (1 master list containing 1 list of ips per proxy website)
         self.proxy_list = [ips for proxy_site in self.proxy_list for ips in proxy_site]
@@ -143,7 +144,7 @@ class find_http_proxy():
                     break
                 letushide_ips.append(ips)
             except:
-                print '[!] Failed get reply from %s' % url
+                print '[!] Failed to get a reply from %s' % url
                 break
 
         # Flatten list of lists (1 list containing 1 list of ips for each page)
@@ -165,13 +166,19 @@ class find_http_proxy():
 
     def gatherproxy_req(self):
         url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
-        try:
-            r = requests.get(url, headers = self.headers)
-            lines = r.text.splitlines()
-        except:
-            print '[!] Failed get reply from %s' % url
-            gatherproxy_list = []
-            return gatherproxy_list
+        lines = []
+        for pagenum in xrange(1,25):
+            try:
+                data = 'Type=elite&PageIdx={}&Uptime=0'.format(str(pagenum))
+                headers = copy.copy(self.headers)
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                r = requests.post(url, headers=headers, data=data)
+                lines += r.text.splitlines()
+            except Exception as e:
+                print str(e)
+                print '[!] Failed: %s' % url
+                gatherproxy_list = []
+                return gatherproxy_list
 
         gatherproxy_list = self.parse_gp(lines)
         return gatherproxy_list
@@ -179,17 +186,31 @@ class find_http_proxy():
     def parse_gp(self, lines):
         ''' Parse the raw scraped data '''
         gatherproxy_list = []
+        ip = ''
+        get_port = False
         for l in lines:
-            if 'proxy_ip' in l.lower():
-                l = l.replace('gp.insertPrx(', '')
-                l = l.replace(');', '')
-                l = l.replace('null', 'None')
-                l = l.strip()
-                l = ast.literal_eval(l)
+            # Check if an IP was found on the line prior
+            if get_port == True:
+                get_port = False
+                # GP obsfuscates the port with hex
+                hex_port = l.split("'")[1]
+                port = str(int(hex_port, 16))
+                ip_port = '{}:{}'.format(ip, port)
+                print ip_port
+                # Reset IP to nothing
+                ip = '' 
+                gatherproxy_list.append(ip_port)
+            # Search for the IP
+            ip_re = re.search( r'[0-9]+(?:\.[0-9]+){3}', l)
+            if ip_re:
+                ip = ip_re.group()
+                get_port = True
 
-                proxy = '%s:%s' % (l["PROXY_IP"], l["PROXY_PORT"])
-                gatherproxy_list.append(proxy)
+                # int('hexstring', 16) converts to decimal. GP uses this for obfuscation
+                #proxy = '%s:%s' % (l["PROXY_IP"], str(int(l["PROXY_PORT"], 16)))
+                #gatherproxy_list.append(proxy)
                 #ctry = l["PROXY_COUNTRY"]
+
         return gatherproxy_list
 
     def proxy_checker(self):
