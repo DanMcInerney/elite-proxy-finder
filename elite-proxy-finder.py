@@ -61,7 +61,6 @@ class find_http_proxy():
         #if not self.quiet:
         #    print '[*] letushide.com: %s proxies' % str(len(letushide_list))
 
-         # Has a login now :(
         gatherproxy_list = self.gatherproxy_req()
         if not self.quiet:
             print '[*] gatherproxy.com: %s proxies' % str(len(gatherproxy_list))
@@ -129,7 +128,7 @@ class find_http_proxy():
     def letushide_req(self):
         ''' Make the request to the proxy site and create a master list from that site '''
         letushide_ips = []
-        for i in xrange(1,20): # can search maximum of 20 pages
+        for i in xrange(1,25): 
             try:
                 url = 'http://letushide.com/filter/http,hap,all/%s/list_of_free_HTTP_High_Anonymity_proxy_servers' % str(i)
                 r = requests.get(url, headers=self.headers)
@@ -167,7 +166,7 @@ class find_http_proxy():
     def gatherproxy_req(self):
         url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
         lines = []
-        for pagenum in xrange(1,25):
+        for pagenum in xrange(1,35):
             try:
                 data = 'Type=elite&PageIdx={}&Uptime=0'.format(str(pagenum))
                 headers = copy.copy(self.headers)
@@ -196,7 +195,6 @@ class find_http_proxy():
                 hex_port = l.split("'")[1]
                 port = str(int(hex_port, 16))
                 ip_port = '{}:{}'.format(ip, port)
-                print ip_port
                 # Reset IP to nothing
                 ip = '' 
                 gatherproxy_list.append(ip_port)
