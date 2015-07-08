@@ -166,7 +166,7 @@ class find_http_proxy():
     def gatherproxy_req(self):
         url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
         lines = []
-        for pagenum in xrange(1,35):
+        for pagenum in xrange(1,20):
             try:
                 data = 'Type=elite&PageIdx={}&Uptime=0'.format(str(pagenum))
                 headers = copy.copy(self.headers)
