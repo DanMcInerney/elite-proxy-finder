@@ -166,7 +166,7 @@ class find_http_proxy():
     def gatherproxy_req(self):
         url = 'http://gatherproxy.com/proxylist/anonymity/?t=Elite'
         lines = []
-        for pagenum in xrange(1,20):
+        for pagenum in xrange(1,10):
             try:
                 data = 'Type=elite&PageIdx={}&Uptime=0'.format(str(pagenum))
                 headers = copy.copy(self.headers)
@@ -228,7 +228,11 @@ class find_http_proxy():
         #first_3_octets = '.'.join(proxy_split[:3])+'.'
 
         results = []
-        urls = ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org', 'https://www.astrill.com/what-is-my-ip-address.php', 'http://danmcinerney.org/headers.php']
+        # Gevent appears to be broken with SSL.
+        #  __init__() got an unexpected keyword argument 'server_hostname'
+        # Doesn't appear to be getting fixed any time soon
+        #urls = ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org', 'https://www.astrill.com/what-is-my-ip-address.php', 'http://danmcinerney.org/headers.php']
+        urls = ['http://danmcinerney.org/ip-test.php', 'http://myip.dnsdynamic.org', 'http://danmcinerney.org/headers.php']
         for url in urls:
             try:
                 check = requests.get(url,
@@ -258,7 +262,7 @@ class find_http_proxy():
         ipre = '(?:[0-9]{1,3}\.){3}[0-9]{1,3}'
 
         # Both of these urls just return the ip and nothing else
-        if url in ['http://danmcinerney.org/ip.php', 'http://myip.dnsdynamic.org']:
+        if url in ['http://danmcinerney.org/ip-test.php', 'http://myip.dnsdynamic.org']:
             if leng == 1:  # Should return 1 line of html
                 match = re.match(ipre, html)
                 if match:
@@ -271,16 +275,17 @@ class find_http_proxy():
             return time_or_error
 
         # This is the SSL page
-        if 'astrill' in url:
-            soup = BeautifulSoup(html)
-            ip = soup.find("td", { "colspan": 2 }).text # the ip is the only on with colspan = 2
-            match = re.match(ipre, ip)
-            if match:
-                if self.externalip in ip:
-                    time_or_error = 'Err: Page loaded; proxy failed'
-            else:
-                time_or_error = 'Err: Page loaded; proxy failed'
-            return time_or_error
+        #if 'astrill' in url:
+        #    soup = BeautifulSoup(html)
+        #    ip = soup.find("td", { "colspan": 2 }).text # the ip is the only on with colspan = 2
+        #    print '****', ip
+        #    match = re.match(ipre, ip)
+        #    if match:
+        #        if self.externalip in ip:
+        #            time_or_error = 'Err: Page loaded; proxy failed'
+        #    else:
+        #        time_or_error = 'Err: Page loaded; proxy failed'
+        #    return time_or_error
 
         if '/headers' in url:
             # check for proxy headers
@@ -369,14 +374,14 @@ class find_http_proxy():
         return time_or_error
 
     def url_shortener(self, url):
-        if 'ip.php' in url:
+        if 'ip-test.php' in url:
             url = 'danmcinerney.org'
         elif 'headers.php' in url:
             url = 'Header check'
         elif 'dnsdynamic' in url:
             url = 'dnsdynamic.org'
-        elif 'astrill' in url:
-            url = 'https://astrill.com'
+        #elif 'astrill' in url:
+        #    url = 'https://astrill.com'
         return url
 
     def passed_all_tests(self, results):
